@@ -21,10 +21,11 @@ function AppShell() {
         <Route path="/t/:tenantSlug/view" element={<TenantViewPage />} />
         
         {/* Static pages */}
+        <Route path="/" element={<AboutPage />} />
         <Route path="/about" element={<AboutPage />} />
         
         {/* Default redirect */}
-        <Route path="*" element={<Navigate to="/about" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

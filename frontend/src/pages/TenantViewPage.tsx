@@ -5,6 +5,7 @@ type Item = {
   id: number;
   name: string;
   amount: number;
+  last_button_clicked?: number;
   created_at: string;
 };
 
@@ -84,7 +85,6 @@ export default function TenantViewPage() {
               )}
             </div>
             <nav className="flex gap-4 text-sm">
-              <Link to={`/t/${tenantSlug}/add`} className="text-gray-600 hover:text-gray-900">Add</Link>
               <Link to={`/t/${tenantSlug}/view`} className="text-blue-600 font-medium">View</Link>
             </nav>
           </div>
@@ -99,7 +99,7 @@ export default function TenantViewPage() {
                 <tr>
                   <th className="text-left p-3">Name</th>
                   <th className="text-left p-3">Amount (₹)</th>
-                  <th className="text-left p-3">When</th>
+                  <th className="text-left p-3">Times</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,7 +114,15 @@ export default function TenantViewPage() {
                     <tr key={it.id} className="border-t">
                       <td className="p-3">{it.name}</td>
                       <td className="p-3">{it.amount}</td>
-                      <td className="p-3">{new Date(it.created_at).toLocaleString()}</td>
+                      <td className="p-3">
+                        {it.last_button_clicked ? (
+                          <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                            {it.last_button_clicked}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">None</span>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

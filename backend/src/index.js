@@ -65,6 +65,7 @@ async function ensureTables() {
         tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         amount INTEGER NOT NULL,
+        last_button_clicked INTEGER DEFAULT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `);
@@ -196,7 +197,7 @@ app.delete('/admin/tenants/:id', authenticateAdmin, async (req, res) => {
 app.get('/tenant/:tenantSlug/items', getTenantFromSlug, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, amount, created_at FROM items WHERE tenant_id = $1 ORDER BY id DESC',
+      'SELECT id, name, amount, last_button_clicked, created_at FROM items WHERE tenant_id = $1 ORDER BY id DESC',
       [req.tenant.id]
     );
     res.json(result.rows);
@@ -213,8 +214,8 @@ app.post('/tenant/:tenantSlug/items', getTenantFromSlug, async (req, res) => {
       return res.status(400).json({ error: 'Invalid payload: require name (string) and amount (number)' });
     }
     const result = await pool.query(
-      'INSERT INTO items (tenant_id, name, amount) VALUES ($1, $2, $3) RETURNING id, name, amount, created_at',
-      [req.tenant.id, name, amount]
+      'INSERT INTO items (tenant_id, name, amount, last_button_clicked) VALUES ($1, $2, $3, $4) RETURNING id, name, amount, last_button_clicked, created_at',
+      [req.tenant.id, name, amount, 1]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -237,6 +238,31 @@ app.delete('/tenant/:tenantSlug/items/:itemId', getTenantFromSlug, async (req, r
   } catch (error) {
     console.error('Error deleting item:', error);
     res.status(500).json({ error: 'Failed to delete item' });
+  }
+});
+
+app.patch('/tenant/:tenantSlug/items/:itemId/button', getTenantFromSlug, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { buttonNumber } = req.body;
+    
+    if (!buttonNumber || ![1, 2, 3].includes(buttonNumber)) {
+      return res.status(400).json({ error: 'Invalid button number. Must be 1, 2, or 3.' });
+    }
+    
+    const result = await pool.query(
+      'UPDATE items SET last_button_clicked = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id, last_button_clicked',
+      [buttonNumber, itemId, req.tenant.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    res.json({ message: 'Button clicked updated', last_button_clicked: result.rows[0].last_button_clicked });
+  } catch (error) {
+    console.error('Error updating button clicked:', error);
+    res.status(500).json({ error: 'Failed to update button clicked' });
   }
 });
 

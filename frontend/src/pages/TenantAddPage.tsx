@@ -5,6 +5,7 @@ type Item = {
   id: number;
   name: string;
   amount: number;
+  last_button_clicked?: number;
   created_at: string;
 };
 
@@ -110,22 +111,34 @@ export default function TenantAddPage() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    const amountNum = Number(amount);
-    if (!name.trim() || !Number.isFinite(amountNum)) {
-      setError('Enter valid name and amount');
+    if (!name.trim() || !amount.trim()) return;
+    
+    const amountNum = parseInt(amount);
+    if (isNaN(amountNum)) {
+      setError('Amount must be a number');
       return;
     }
+    
     try {
+      setError(null);
       const res = await fetch(`${API_BASE}/tenant/${tenantSlug}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), amount: amountNum })
       });
-      if (!res.ok) throw new Error('Request failed');
-      setName('');
-      setAmount('');
-      await fetchItems();
+      
+      if (res.ok) {
+        const newItem = await res.json();
+        setName('');
+        setAmount('');
+        await fetchItems();
+        // Automatically play voice with button 1 when an item is added
+        if (canSpeak && preferredVoice) {
+          speak(newItem, 1);
+        }
+      } else {
+        setError('Failed to add item');
+      }
     } catch (e) {
       setError('Failed to add item');
     }
@@ -155,8 +168,20 @@ export default function TenantAddPage() {
     return '';
   };
 
-  const speak = (item: Item, n: number) => {
+  const speak = async (item: Item, n: number) => {
     if (!canSpeak) return;
+    
+    // Update the last button clicked in the backend
+    try {
+      await fetch(`${API_BASE}/tenant/${tenantSlug}/items/${item.id}/button`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buttonNumber: n })
+      });
+    } catch (e) {
+      console.error('Failed to update button clicked:', e);
+    }
+    
     const counter = englishCounter(n);
     const text = `${item.name} ... ${item.amount} rupees ... ${counter}`;
     const utter = new SpeechSynthesisUtterance(text);
